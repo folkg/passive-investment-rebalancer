@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useContext } from "react";
 import { PassivAccountContext } from "./contexts/passiv-account-provider";
-import Accounts from "./Accounts";
+import Overview from "./Overview";
 import Login from "./Login";
 
 // check to ensure we are logged in before navigating to a private page
@@ -25,16 +25,7 @@ function CreateRoutes() {
         path="/"
         element={
           <PrivateRoute>
-            <Accounts />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        exact
-        path="/accounts"
-        element={
-          <PrivateRoute>
-            <Accounts />
+            <Overview />
           </PrivateRoute>
         }
       />
