@@ -18,6 +18,8 @@ function Account(props) {
     return "$" + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
   };
 
+  //TODO: Total value needs to select for the proper currency
+
   // [] option will behave like componentDidMount and run only once at startup
   // Fetch the account's holdings
   useEffect(() => {
@@ -46,12 +48,18 @@ function Account(props) {
         <Paper
           variant="outlined"
           sx={{
-            padding: "1rem 0",
-            margin: " 1.5rem auto",
-            width: "25%",
+            margin: " 1.5rem",
+            minWidth: "max-content",
+            maxWidth: "35%",
             marginLeft: 0,
           }}
         >
+          <Typography
+            variant="inherit"
+            sx={{ margin: "1rem 1rem", fontWeight: "fontWeightBold" }}
+          >
+            Total Value: {currencyFormat(cashValue + stockValue)}
+          </Typography>
           <Typography
             variant="inherit"
             sx={{ margin: "1rem 1rem", fontWeight: "fontWeightBold" }}
@@ -64,44 +72,32 @@ function Account(props) {
           >
             Stocks: {currencyFormat(stockValue)}
           </Typography>
-          <Typography
-            variant="inherit"
-            sx={{ margin: "1rem 1rem", fontWeight: "fontWeightBold" }}
-          >
-            Total Value: {currencyFormat(cashValue + stockValue)}
-          </Typography>
         </Paper>
       ) : (
         ""
       )}
-      <Paper
-        variant="outlined"
-        sx={{ padding: "1rem 0", margin: " 1.5rem auto" }}
-      >
+      <Paper variant="outlined" sx={{ margin: " 1.5rem auto" }}>
         <List padding="1">
           <StockHeader />
           {stocks == null
             ? "Loading..."
-            : stocks.map((s) => (
+            : stocks.map((s, idx) => (
                 <React.Fragment key={s.internalID}>
                   <Stock stockData={s} />
-                  <Divider />
+                  {idx < stocks.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
         </List>
       </Paper>
-      <Paper
-        variant="outlined"
-        sx={{ padding: "1rem 0", margin: " 1.5rem auto" }}
-      >
+      <Paper variant="outlined" sx={{ margin: " 1.5rem auto" }}>
         <List>
           <CashHeader />
           {cash == null
             ? "Loading..."
-            : cash.map((c) => (
+            : cash.map((c, idx) => (
                 <React.Fragment key={c.internalID}>
                   <Cash cashData={c} />
-                  <Divider />
+                  {idx < cash.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
         </List>
