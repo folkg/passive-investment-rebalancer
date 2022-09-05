@@ -17,13 +17,6 @@ export function PassivAccountProvider(props) {
 
   // [] option will behave like componentDidMount and run only once at startup
   useEffect(() => {
-    // If our JWT is not empty set the header for the session
-    if (!(jwt == null)) {
-      axios.defaults.headers.common["Authorization"] = `JWT ${jwt}`;
-    }
-  }, []);
-
-  useEffect(() => {
     // Create an interceptor that looks for a new JWT. Refresh token if required.
     axios.interceptors.response.use((res) => {
       const newToken = res.headers["X-New-Token"];
@@ -31,8 +24,6 @@ export function PassivAccountProvider(props) {
       if (newToken) {
         // set the new JWT in state and sync to localstorage
         setJwt(newToken);
-        // Set the axios header for this session
-        axios.defaults.headers.common["Authorization"] = `JWT ${jwt}`;
       }
 
       return res;
@@ -50,8 +41,6 @@ export function PassivAccountProvider(props) {
       if (token) {
         // set the JWT in state and sync to localstorage
         setJwt(token);
-        // Set the axios header for this session
-        axios.defaults.headers.common["Authorization"] = `JWT ${jwt}`;
         return true;
       }
     } catch (e) {
@@ -81,43 +70,109 @@ export function PassivAccountProvider(props) {
 
   const logout = () => {
     setJwt("");
-    delete axios.defaults.headers.common["Authorization"];
   };
 
   const getAPIStatus = async () => {
-    const res = await axios.get(API_URL);
+    const res = await axios.get(API_URL, {
+      headers: { Authorization: `JWT ${jwt}` },
+    });
     return res.status === 200;
   };
 
   const verifyTokenStatus = async () => {
-    const res = await axios.post(API_URL + "auth/verify", { token: jwt });
+    const res = await axios.post(
+      API_URL + "auth/verify",
+      { token: jwt },
+      {
+        headers: { Authorization: `JWT ${jwt}` },
+      }
+    );
 
     return res.status === 200;
   };
 
   const getAccounts = async () => {
-    const res = await axios.get(API_URL + "accounts");
-    console.log(res);
+    const res = await axios.get(API_URL + "accounts", {
+      headers: { Authorization: `JWT ${jwt}` },
+    });
+
+    if (res.status === 200) {
+      //Build the expected return data structure
+      const accountData = res.data.map((a) => ({
+        internalID: a.id,
+        accountNum: a.number,
+        accountName: a.name,
+        accountType: a.meta.type,
+        institutionName: a.institution_name,
+      }));
+
+      return accountData;
+    } else {
+      return null;
+    }
   };
 
-  const getAccountBalance = async (accountId) => {
-    const res = await axios.get(API_URL + `accounts/${accountId}/balances`);
+  const getAccountBalances = async (accountId) => {
+    const res = await axios.get(API_URL + `accounts/${accountId}/balances`, {
+      headers: { Authorization: `JWT ${jwt}` },
+    });
     console.log(res);
+
+    if (res.status === 200) {
+      //Build the expected return data structure
+      const balanceData = res.data.map((a) => ({
+        internalID: a.currency.id,
+        currencyCode: a.currency.code,
+        currencyName: a.currency.name,
+        balance: a.cash,
+      }));
+
+      return balanceData;
+    } else {
+      return null;
+    }
   };
 
   const getAccountPositions = async (accountId) => {
-    const res = await axios.get(API_URL + `accounts/${accountId}/positions`);
+    const res = await axios.get(API_URL + `accounts/${accountId}/positions`, {
+      headers: { Authorization: `JWT ${jwt}` },
+    });
     console.log(res);
+
+    if (res.status === 200) {
+      //Build the expected return data structure
+      //TODO: Do we need this internal ID? And are we fetching the correct one? There's lots
+      const positionData = res.data.map((a) => ({
+        internalID: a.symbol.id,
+        symbol: a.symbol.symbol.symbol,
+        description: a.symbol.symbol.description,
+        currencyCode: a.symbol.symbol.currency.code,
+        units: a.units,
+        price: a.price,
+        value: a.units * a.price,
+      }));
+
+      console.log(positionData);
+
+      return positionData;
+    } else {
+      return null;
+    }
   };
 
   const getPortfolioGroups = async () => {
-    const res = await axios.get(API_URL + `portfolioGroups`);
+    const res = await axios.get(API_URL + `portfolioGroups`, {
+      headers: { Authorization: `JWT ${jwt}` },
+    });
     console.log(res);
   };
 
   const getCalculatedTrades = async (portfolioGroupId) => {
     const res = await axios.get(
-      API_URL + `portfolioGroups/${portfolioGroupId}/calculatedtrades`
+      API_URL + `portfolioGroups/${portfolioGroupId}/calculatedtrades`,
+      {
+        headers: { Authorization: `JWT ${jwt}` },
+      }
     );
     console.log(res);
   };
@@ -129,7 +184,10 @@ export function PassivAccountProvider(props) {
   ) => {
     const res = await axios.get(
       API_URL +
-        `/portfolioGroups/${portfolioGroupId}/calculatedtrades/${calculatedTradeId}/modify/${tradeId}`
+        `/portfolioGroups/${portfolioGroupId}/calculatedtrades/${calculatedTradeId}/modify/${tradeId}`,
+      {
+        headers: { Authorization: `JWT ${jwt}` },
+      }
     );
     console.log(res);
   };
@@ -138,7 +196,10 @@ export function PassivAccountProvider(props) {
     //TODO: How to patch a trade? Need to include something in the body.
     const res = await axios.patch(
       API_URL +
-        `/portfolioGroups/${portfolioGroupId}/calculatedtrades/${calculatedTradeId}/modify/${tradeId}`
+        `/portfolioGroups/${portfolioGroupId}/calculatedtrades/${calculatedTradeId}/modify/${tradeId}`,
+      {
+        headers: { Authorization: `JWT ${jwt}` },
+      }
     );
     console.log(res);
   };
@@ -147,13 +208,18 @@ export function PassivAccountProvider(props) {
     //TODO: How to post the trade? Need to include something in the body.
     const res = await axios.post(
       API_URL +
-        `/portfolioGroups/${portfolioGroupId}/calculatedtrades/${calculatedTradeId}/placeOrders`
+        `/portfolioGroups/${portfolioGroupId}/calculatedtrades/${calculatedTradeId}/placeOrders`,
+      {
+        headers: { Authorization: `JWT ${jwt}` },
+      }
     );
     console.log(res);
   };
 
   const getExchangeRates = async () => {
-    const res = await axios.get(API_URL + `currencies/rates`);
+    const res = await axios.get(API_URL + `currencies/rates`, {
+      headers: { Authorization: `JWT ${jwt}` },
+    });
     console.log(res);
   };
 
@@ -166,7 +232,7 @@ export function PassivAccountProvider(props) {
         getAPIStatus,
         verifyTokenStatus,
         getAccounts,
-        getAccountBalance,
+        getAccountBalances,
         getAccountPositions,
         getPortfolioGroups,
       }}
