@@ -1,40 +1,22 @@
-import React, { useState, useContext, useEffect } from "react";
-import { PassivAccountContext } from "./contexts/passiv-account-provider";
+import React, { useContext } from "react";
+import { HoldingsContext } from "./contexts/holdings.context";
 import { Stock, StockHeader } from "./Stock";
 import { Cash, CashHeader } from "./Cash";
 import { CssBaseline, Paper, List, Divider, Typography } from "@mui/material";
 
 function Account(props) {
-  const [stocks, setStocks] = useState(null);
-  const [cash, setCash] = useState(null);
-  const [stockValue, setStockValue] = useState(null);
-  const [cashValue, setCashValue] = useState(null);
-  const { getAccountPositions, getAccountBalances } =
-    useContext(PassivAccountContext);
+  const { getAccountHoldings } = useContext(HoldingsContext);
 
   const { internalID, accountName, accountNum } = props.accountData;
+  const { stocks, cash, stockValue, cashValue } =
+    getAccountHoldings(internalID);
 
   const currencyFormat = (num) => {
     return "$" + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
   };
 
-  //TODO: Total value needs to select for the proper currency
-
-  // [] option will behave like componentDidMount and run only once at startup
-  // Fetch the account's holdings
-  useEffect(() => {
-    async function fetchHoldings() {
-      const tempStocks = await getAccountPositions(internalID);
-      setStocks(tempStocks);
-      const tempCash = await getAccountBalances(internalID);
-      setCash(tempCash);
-
-      setCashValue(cash.reduce((p, c) => p + c.balance, 0));
-      setStockValue(stocks.reduce((p, c) => p + c.value, 0));
-    }
-    fetchHoldings();
-  }, []);
-
+  //TODO: Do we still need the loading setup here? Or will all account data already
+  // be loaded with the holdings.context? When is holdings.context called first and updated later?
   return (
     <Paper
       elevation={6}
