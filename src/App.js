@@ -1,6 +1,5 @@
 import { PassivAccountProvider } from "./contexts/passiv-account-provider";
 import { DarkModeProvider } from "./contexts/theme.context";
-import { HoldingsProvider } from "./contexts/holdings.context";
 import NavBar from "./NavBar";
 import CreateRoutes from "./CreateRoutes";
 import "./App.css";
@@ -10,10 +9,8 @@ function App() {
   return (
     <PassivAccountProvider>
       <DarkModeProvider>
-        <HoldingsProvider>
-          <NavBar />
-          {routes}
-        </HoldingsProvider>
+        <NavBar />
+        {routes}
       </DarkModeProvider>
     </PassivAccountProvider>
   );

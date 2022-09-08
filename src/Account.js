@@ -1,15 +1,14 @@
 import React, { useContext } from "react";
-import { HoldingsContext } from "./contexts/holdings.context";
+import { PassivAccountContext } from "./contexts/passiv-account-provider";
 import { Stock, StockHeader } from "./Stock";
 import { Cash, CashHeader } from "./Cash";
 import { CssBaseline, Paper, List, Divider, Typography } from "@mui/material";
 
 function Account(props) {
-  const { getAccountHoldings } = useContext(HoldingsContext);
+  const { getAccountHoldings } = useContext(PassivAccountContext);
 
-  const { internalID, accountName, accountNum } = props.accountData;
-  const { stocks, cash, stockValue, cashValue } =
-    getAccountHoldings(internalID);
+  const { accountId, accountName, accountNum } = props.accountData;
+  const { stocks, cash, cashValue, stockValue } = getAccountHoldings(accountId);
 
   const currencyFormat = (num) => {
     return "$" + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
@@ -23,7 +22,7 @@ function Account(props) {
       sx={{ padding: "1rem 2rem", margin: " 1.5rem auto", maxWidth: "md" }}
     >
       <CssBaseline />
-      <Typography variant="h5" sx={{ margin: "0 1rem 1rem 1rem" }}>
+      <Typography id="title" variant="h5" sx={{ margin: "0 1rem 1rem 1rem" }}>
         {accountName} ({accountNum})
       </Typography>
       {!(cashValue == null || stockValue == null) ? (
@@ -37,18 +36,21 @@ function Account(props) {
           }}
         >
           <Typography
+            id="total"
             variant="inherit"
             sx={{ margin: "1rem 1rem", fontWeight: "fontWeightBold" }}
           >
             Total Value: {currencyFormat(cashValue + stockValue)}
           </Typography>
           <Typography
+            id="cash"
             variant="inherit"
             sx={{ margin: "1rem 1rem", fontWeight: "fontWeightBold" }}
           >
             Cash: {currencyFormat(cashValue)}
           </Typography>
           <Typography
+            id="stocks"
             variant="inherit"
             sx={{ margin: "1rem 1rem", fontWeight: "fontWeightBold" }}
           >

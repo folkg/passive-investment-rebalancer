@@ -1,6 +1,6 @@
 // API Docs: https://app.swaggerhub.com/apis-docs/passiv/PassivAPI/v1#/
 
-import { useEffect, createContext } from "react";
+import { useEffect, useState, createContext } from "react";
 import { useLocalStorageState } from "../hooks/useLocalStorageState";
 import axios from "axios";
 
@@ -14,6 +14,9 @@ export const PassivAccountContext = createContext();
 export function PassivAccountProvider(props) {
   // JWT will be retrieved from localstorage and set to JWT, if it exists. Otherwise it will be initialized as empty string.
   const [jwt, setJwt] = useLocalStorageState("jwt");
+  const [accounts, setAccounts] = useLocalStorageState(null);
+  const [stocks, setStocks] = useState(null);
+  const [cash, setCash] = useState(null);
 
   // [] option will behave like componentDidMount and run only once at startup
   useEffect(() => {
@@ -28,6 +31,20 @@ export function PassivAccountProvider(props) {
 
       return res;
     });
+  }, []);
+
+  useEffect(() => {
+    // Fetch the account data and holdings
+    const fetchData = async () => {
+      const accountData = await fetchAccounts();
+      setAccounts(accountData);
+      const stockData = await fetchAccountPositions(accountData);
+      setStocks(stockData);
+      const cashData = await fetchAccountBalances(accountData);
+      setCash(cashData);
+    };
+
+    fetchData();
   }, []);
 
   const login = async (email, password) => {
@@ -91,7 +108,7 @@ export function PassivAccountProvider(props) {
     return res.status === 200;
   };
 
-  const getAccounts = async () => {
+  const fetchAccounts = async () => {
     const res = await axios.get(API_URL + "accounts", {
       headers: { Authorization: `JWT ${jwt}` },
     });
@@ -99,65 +116,96 @@ export function PassivAccountProvider(props) {
     if (res.status === 200) {
       //Build the expected return data structure
       const accountData = res.data.map((a) => ({
-        internalID: a.id,
+        accountId: a.id,
         accountNum: a.number,
         accountName: a.name,
         accountType: a.meta.type,
         institutionName: a.institution_name,
       }));
-
       return accountData;
     } else {
       return null;
     }
   };
 
-  const getAccountBalances = async (accountId) => {
-    const res = await axios.get(API_URL + `accounts/${accountId}/balances`, {
-      headers: { Authorization: `JWT ${jwt}` },
-    });
-    console.log(res);
-
-    if (res.status === 200) {
-      //Build the expected return data structure
-      const balanceData = res.data.map((a) => ({
-        internalID: a.currency.id,
-        currencyCode: a.currency.code,
-        currencyName: a.currency.name,
-        balance: a.cash,
-      }));
-
-      return balanceData;
-    } else {
-      return null;
-    }
+  const fetchAccountBalances = async (accountData) => {
+    // loop each account
+    let cashItems = [];
+    for (const acc of accountData) {
+      //fetch balances for the account
+      const res = await axios.get(
+        API_URL + `accounts/${acc.accountId}/balances`,
+        {
+          headers: { Authorization: `JWT ${jwt}` },
+        }
+      );
+      //create a cashData object with the response
+      if (res.status === 200) {
+        const cashData = res.data.map((a) => ({
+          accountId: acc.accountId,
+          currencyId: a.currency.id,
+          currencyCode: a.currency.code,
+          currencyName: a.currency.name,
+          balance: a.cash,
+        }));
+        //add the new cashData to the existing object
+        cashItems.push(...cashData);
+      } // end if
+    } // end for
+    return cashItems;
   };
 
-  const getAccountPositions = async (accountId) => {
-    const res = await axios.get(API_URL + `accounts/${accountId}/positions`, {
-      headers: { Authorization: `JWT ${jwt}` },
-    });
-    console.log(res);
+  const fetchAccountPositions = async (accountData) => {
+    // loop each account
+    let stockItems = [];
 
-    if (res.status === 200) {
-      //Build the expected return data structure
-      //TODO: Do we need this internal ID? And are we fetching the correct one? There's lots
-      const positionData = res.data.map((a) => ({
-        internalID: a.symbol.id,
-        symbol: a.symbol.symbol.symbol,
-        description: a.symbol.symbol.description,
-        currencyCode: a.symbol.symbol.currency.code,
-        units: a.units,
-        price: a.price,
-        value: a.units * a.price,
-      }));
+    for (const acc of accountData) {
+      //fetch positions for the account
+      const res = await axios.get(
+        API_URL + `accounts/${acc.accountId}/positions`,
+        {
+          headers: { Authorization: `JWT ${jwt}` },
+        }
+      );
+      //create a stockData object with the response
+      if (res.status === 200) {
+        const stockData = res.data.map((a) => ({
+          accountId: acc.accountId,
+          stockId: a.symbol.id,
+          symbol: a.symbol.symbol.symbol,
+          description: a.symbol.symbol.description,
+          currencyCode: a.symbol.symbol.currency.code,
+          units: a.units,
+          price: a.price,
+          value: a.units * a.price,
+        }));
+        //add the new cashData to the existing object
+        stockItems.push(...stockData);
+      } //end if
+    } //end for loop
+    return stockItems;
+  };
 
-      console.log(positionData);
+  const getAccountHoldings = (accountId) => {
+    let accountStocks, accountCash, stockValue, cashValue;
 
-      return positionData;
+    if (stocks == null) {
+      accountStocks = null;
+      stockValue = 0;
     } else {
-      return null;
+      accountStocks = stocks.filter((s) => s.accountId === accountId);
+      stockValue = accountStocks.reduce((p, c) => p + c.value, 0);
     }
+
+    if (cash == null) {
+      accountCash = null;
+      cashValue = 0;
+    } else {
+      accountCash = cash.filter((c) => c.accountId === accountId);
+      cashValue = accountCash.reduce((p, c) => p + c.balance, 0);
+    }
+
+    return { stocks: accountStocks, cash: accountCash, stockValue, cashValue };
   };
 
   const getPortfolioGroups = async () => {
@@ -231,10 +279,9 @@ export function PassivAccountProvider(props) {
         isLoggedIn: isTokenValid(),
         getAPIStatus,
         verifyTokenStatus,
-        getAccounts,
-        getAccountBalances,
-        getAccountPositions,
         getPortfolioGroups,
+        accounts,
+        getAccountHoldings,
       }}
     >
       {props.children}
