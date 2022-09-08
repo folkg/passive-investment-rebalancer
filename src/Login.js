@@ -19,8 +19,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 function Login() {
   const navigate = useNavigate();
   const [loginError, setLoginError] = useState(false);
-  const { login, getAccounts, getAPIStatus, verifyTokenStatus, isLoggedIn } =
-    useContext(PassivAccountContext);
+  const { login, isLoggedIn } = useContext(PassivAccountContext);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -88,9 +87,6 @@ function Login() {
             Sign In
           </Button>
           {isLoggedIn && <div>User is already logged in</div>}
-          <Button onClick={getAccounts}>Get Accounts</Button>
-          <Button onClick={getAPIStatus}>Get API Status</Button>
-          <Button onClick={verifyTokenStatus}>Verify Token Status</Button>
         </Box>
       </Box>
     </Container>
