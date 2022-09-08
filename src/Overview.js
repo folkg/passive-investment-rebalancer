@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
-import { HoldingsContext } from "./contexts/holdings.context";
+import { PassivAccountContext } from "./contexts/passiv-account-provider";
 import Account from "./Account";
 import { Container } from "@mui/material";
 
 function Overview() {
-  const { accounts } = useContext(HoldingsContext);
+  const { accounts } = useContext(PassivAccountContext);
 
   //TODO: Need all holdings-context stuff to be loaded first
 
@@ -14,7 +14,7 @@ function Overview() {
     <Container>
       {accounts == null
         ? "Loading..."
-        : accounts.map((a) => <Account key={a.internalID} accountData={a} />)}
+        : accounts.map((a) => <Account key={a.accountId} accountData={a} />)}
     </Container>
   );
 }
