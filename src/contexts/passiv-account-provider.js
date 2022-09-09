@@ -12,6 +12,10 @@ const LOGIN_URL = "auth/login";
 export const PassivAccountContext = createContext();
 
 export function PassivAccountProvider(props) {
+  //TODO: Store stocks and cash in session storage to help speed it up? Might need to fetch new info before re-balancing anyway to get latest prices, but will help with loading.
+  //TODO: would it be worth updating the state of cash and stocks one account at a time to speed loading? load the stocks and cash account by account in one function?
+  //TODO: Make this a 'Passiv' specific javascript module. Create a general 'brokerage-context' that provides the details to the rest of the app. We could then also create a questrade javascript module.
+
   // JWT will be retrieved from localstorage and set to JWT, if it exists. Otherwise it will be initialized as empty string.
   const [jwt, setJwt] = useLocalStorageState("jwt");
   const [accounts, setAccounts] = useLocalStorageState(null);
@@ -33,14 +37,20 @@ export function PassivAccountProvider(props) {
     });
   }, []);
 
+  //TODO: Do we want to refresh everything on reload as we do now? Keep the data in local/session storage though to keep things snappy looking?
+  //TODO: How often do we want to refresh the stock info? On each page navigation re-do? Could be done in background. Or only on calc / settings changes?
   useEffect(() => {
     // Fetch the account data and holdings
     const fetchData = async () => {
       const accountData = await fetchAccounts();
       setAccounts(accountData);
-      const stockData = await fetchAccountPositions(accountData);
+
+      const requests = [
+        fetchAccountPositions(accountData),
+        fetchAccountBalances(accountData),
+      ];
+      const [stockData, cashData] = await Promise.all(requests);
       setStocks(stockData);
-      const cashData = await fetchAccountBalances(accountData);
       setCash(cashData);
     };
 
@@ -131,18 +141,20 @@ export function PassivAccountProvider(props) {
   const fetchAccountBalances = async (accountData) => {
     // loop each account
     let cashItems = [];
-    for (const acc of accountData) {
-      //fetch balances for the account
-      const res = await axios.get(
-        API_URL + `accounts/${acc.accountId}/balances`,
-        {
-          headers: { Authorization: `JWT ${jwt}` },
-        }
-      );
+
+    const requests = accountData.map((a) =>
+      axios.get(API_URL + `accounts/${a.accountId}/balances`, {
+        headers: { Authorization: `JWT ${jwt}`, accountId: a.accountId },
+      })
+    );
+    const responses = await Promise.all(requests);
+    for (const res of responses) {
+      //fetch account ID we stored in header
+      const accountId = res.config.headers.accountId;
       //create a cashData object with the response
       if (res.status === 200) {
         const cashData = res.data.map((a) => ({
-          accountId: acc.accountId,
+          accountId: accountId,
           currencyId: a.currency.id,
           currencyCode: a.currency.code,
           currencyName: a.currency.name,
@@ -152,6 +164,7 @@ export function PassivAccountProvider(props) {
         cashItems.push(...cashData);
       } // end if
     } // end for
+
     return cashItems;
   };
 
@@ -159,18 +172,20 @@ export function PassivAccountProvider(props) {
     // loop each account
     let stockItems = [];
 
-    for (const acc of accountData) {
-      //fetch positions for the account
-      const res = await axios.get(
-        API_URL + `accounts/${acc.accountId}/positions`,
-        {
-          headers: { Authorization: `JWT ${jwt}` },
-        }
-      );
-      //create a stockData object with the response
+    const requests = accountData.map((a) =>
+      axios.get(API_URL + `accounts/${a.accountId}/positions`, {
+        headers: { Authorization: `JWT ${jwt}`, accountId: a.accountId },
+      })
+    );
+
+    const responses = await Promise.all(requests);
+    for (const res of responses) {
+      //fetch account ID we stored in header
+      const accountId = res.config.headers.accountId;
+      //create a cashData object with the response
       if (res.status === 200) {
         const stockData = res.data.map((a) => ({
-          accountId: acc.accountId,
+          accountId: accountId,
           stockId: a.symbol.id,
           symbol: a.symbol.symbol.symbol,
           description: a.symbol.symbol.description,
@@ -183,9 +198,11 @@ export function PassivAccountProvider(props) {
         stockItems.push(...stockData);
       } //end if
     } //end for loop
+
     return stockItems;
   };
 
+  //TODO: Account for USD stocks and cash, change using the exchange rate function
   const getAccountHoldings = (accountId) => {
     let accountStocks, accountCash, stockValue, cashValue;
 
